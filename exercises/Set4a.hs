@@ -35,10 +35,7 @@ import Data.Array
 -- you remove the Eq a => constraint from the type!
 
 allEqual :: Eq a => [a] -> Bool
-allEqual xs = 
-    if length (nub xs) > 1 
-        then False 
-        else True
+allEqual xs = length (nub xs) <= 1 
 
 ------------------------------------------------------------------------------
 -- Ex 2: implement the function distinct which returns True if all
@@ -53,10 +50,7 @@ allEqual xs =
 --   distinct [1,2] ==> True
 
 distinct :: Eq a => [a] -> Bool
-distinct xs = 
-    if length (nub xs) /= length xs
-        then False
-        else True
+distinct xs = length (nub xs) == length xs 
 
 ------------------------------------------------------------------------------
 -- Ex 3: implement the function middle that returns the middle value
@@ -70,7 +64,7 @@ distinct xs =
 --   middle 1 7 3        ==> 3
 
 middle :: Ord a => a -> a -> a -> a
-middle a b c = head $ tail $ sort (a:b:c:[])
+middle a b c = head $ tail $ sort [a,b,c]
 
 ------------------------------------------------------------------------------
 -- Ex 4: return the range of an input list, that is, the difference
@@ -86,7 +80,8 @@ middle a b c = head $ tail $ sort (a:b:c:[])
 --   rangeOf [1.5,1.0,1.1,1.2]  ==> 0.5
 
 rangeOf :: Ord a => Num a => [a] -> a
-rangeOf xs = head (reverse (sort xs)) - head (sort xs) 
+rangeOf xs = maximum xs -  minimum xs 
+
 ------------------------------------------------------------------------------
 -- Ex 5: given a (non-empty) list of (non-empty) lists, return the longest
 -- list. If there are multiple lists of the same length, return the list that
@@ -103,11 +98,11 @@ rangeOf xs = head (reverse (sort xs)) - head (sort xs)
 --   longest [[1,2,3],[4,5],[6]] ==> [1,2,3]
 --   longest ["bcd","def","ab"] ==> "bcd"
 longest :: Ord a => [[a]] -> [a]
-longest xs = head $ reverse $ sortBy longestSmallestFirst xs
+longest = maximumBy longestSmallestFirst 
 
 longestSmallestFirst :: (Ord a) => [a] -> [a] -> Ordering
 longestSmallestFirst x y = 
-    if compare (length x) (length y) == EQ
+    if length y == length x
         then compare (head y) (head x)
         else compare (length x) (length y)
 
@@ -126,11 +121,10 @@ longestSmallestFirst x y =
 --   incrementKey 'a' [('a',3.4)] ==> [('a',4.4)]
 
 incrementKey :: Ord k => Num v => k -> [(k,v)] -> [(k,v)]
-incrementKey k table = map (\(key, value) -> 
+incrementKey k = map (\(key, value) -> 
     if key == k 
         then (key,value+1) 
         else (key,value)) 
-    table
 
 ------------------------------------------------------------------------------
 -- Ex 7: compute the average of a list of values of the Fractional
@@ -145,7 +139,7 @@ incrementKey k table = map (\(key, value) ->
 -- length to a Fractional
 
 average :: Fractional a => [a] -> a
-average xs = (foldr (+) 0 xs) / (fromIntegral $ length xs)
+average xs = foldr (+) 0 xs / (fromIntegral $ length xs)
 
 ------------------------------------------------------------------------------
 -- Ex 8: given a map from player name to score and two players, return
@@ -189,7 +183,7 @@ freqs xs = foldr (Map.alter incrementValue) Map.empty xs
 
 incrementValue :: Num a => Maybe a -> Maybe a
 incrementValue (Just mv) = Just (mv + 1)
-incrementValue Nothing = (Just 1)
+incrementValue Nothing = Just 1
 
 ------------------------------------------------------------------------------
 -- Ex 10: recall the withdraw example from the course material. Write a
