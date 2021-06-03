@@ -106,7 +106,7 @@ ex4_infinite = forAllBlind (elements [0,1,2,3,4,5,6,7,8,9]) $ \a ->
   forAllBlind (elements [0,1,2,3,4,5,6,7,8,9]) $ \b ->
   forAllBlind (choose (0,1000)) $ \i ->
   counterexample ("With a=" ++ show a ++ ", b=" ++ show b) $
-  $(testing' [|averages (cycle [a,b])|]) $ \res ->
+  $(testing'[|averages (cycle [a,b])|]) $ \res ->
   counterexample ("  element at index " ++ show i) $
   let na = fromIntegral (div i 2 + 1)
       nb = fromIntegral (div (i+1) 2)
@@ -189,4 +189,4 @@ ex9_2 = forAllShrinkBlind (listOf (elements ["Left","Right"])) subterms $ \dirs 
   let cnt = sum (map (\d -> case d of "Left" -> 1; "Right" -> -1) dirs)
       answer = ["Maze","Deeper in the maze","Elsewhere in the maze"] !! mod cnt 3
   in counterexample ("with dirs = " ++ show dirs) $
-  $(testing' [|last (play maze dirs)|]) (?==answer)
+  $(testing' [|last (play maze dirs)|]) (?==answer) 
