@@ -1,12 +1,10 @@
 module Set11b where
 
 import Control.Monad
-import Data.List
 import Data.IORef
-import System.IO
-
+import Data.List
 import Mooc.Todo
-
+import System.IO
 
 ------------------------------------------------------------------------------
 -- Ex 1: Given an IORef String and a list of Strings, update the value
@@ -20,7 +18,10 @@ import Mooc.Todo
 --   "xfoobarquux"
 
 appendAll :: IORef String -> [String] -> IO ()
-appendAll = todo
+appendAll r [] = return ()
+appendAll r xs = do
+  rVal <- readIORef r
+  writeIORef r (rVal ++ concat xs)
 
 ------------------------------------------------------------------------------
 -- Ex 2: Given two IORefs, swap the values stored in them.
@@ -35,7 +36,11 @@ appendAll = todo
 --   "x"
 
 swapIORefs :: IORef a -> IORef a -> IO ()
-swapIORefs = todo
+swapIORefs a b = do
+  aVal <- readIORef a
+  bVal <- readIORef b
+  writeIORef a bVal
+  writeIORef b aVal
 
 ------------------------------------------------------------------------------
 -- Ex 3: sometimes one bumps into IO operations that return IO
@@ -61,7 +66,9 @@ swapIORefs = todo
 --        replicateM l getLine
 
 doubleCall :: IO (IO a) -> IO a
-doubleCall op = todo
+doubleCall op = do
+  val <- op
+  val
 
 ------------------------------------------------------------------------------
 -- Ex 4: implement the analogue of function composition (the (.)
@@ -80,19 +87,70 @@ doubleCall op = todo
 --   3. return the result (of type b)
 
 compose :: (a -> IO b) -> (c -> IO a) -> c -> IO b
-compose op1 op2 c = todo
+compose op1 op2 c = do
+  aVal <- op2 c
+  op1 aVal
 
 ------------------------------------------------------------------------------
--- Ex 5: Reading lines from a file. The module System.IO defines
+-- Ex 5: Implement the operation mkCounter that produces the IO operations
+-- inc :: IO () and get :: IO Int. These operations should work like this:
+--
+--   get returns the number of times inc has been called
+--
+-- In other words, a simple stateful counter. Use an IORef to store the count.
+--
+-- Note: this is an IO operation that produces two IO operations. Thus
+-- the type of mkCounter is IO (IO (), IO Int).
+--
+-- This exercise is tricky. Feel free to leave it until later.
+--
+-- An example of how mkCounter works in GHCi:
+--
+--  *Set11b> (inc,get) <- mkCounter
+--  *Set11b> inc
+--  *Set11b> inc
+--  *Set11b> get
+--  2
+--  *Set11b> inc
+--  *Set11b> inc
+--  *Set11b> get
+--  4
+
+mkCounter :: IO (IO (), IO Int)
+mkCounter = do
+  ref <- newIORef 0
+  return (modifyIORef ref (+ 1), readIORef ref)
+
+-- this one works that it every call increases counter
+-- inc <- mkCounter'
+-- inc ==> 0
+-- inc ==> 1
+-- ...
+mkCounter' :: IO (IO ())
+mkCounter' = do
+  ref <- newIORef 0
+  return $ do
+    counter <- readIORef ref
+    print counter
+    modifyIORef ref (+ 1)
+
+------------------------------------------------------------------------------
+-- Ex 6: Reading lines from a file. The module System.IO defines
 -- operations for Handles, which represent open files that can be read
 -- from or written to. Here are some functions that might be useful:
 --
+
 -- * hGetLine :: Handle -> IO String
+
 --   Reads one line from the Handle. Will fail if the Handle is at the
 --   end of the file
+
 -- * hIsEOF :: Handle -> IO Bool
+
 --   Produces True if the Handle is at the end of the file.
+
 -- * hGetContents :: Handle -> IO String
+
 --   Reads content from Handle until the end of the file.
 --
 -- Implement the function hFetchLines which returns the contents of
@@ -110,7 +168,19 @@ compose op1 op2 c = todo
 --   ["module Set11b where","","import Control.Monad"]
 
 hFetchLines :: Handle -> IO [String]
-hFetchLines = todo
+hFetchLines h = do
+  fileContents <- hGetContents h
+  return $ lines fileContents
+
+hFetchLines' :: Handle -> IO [String]
+hFetchLines' h = do
+  line <- hGetLine h
+  check <- hIsEOF h
+  if check
+    then return []
+    else do
+      lines <- hFetchLines' h
+      return (line : lines)
 
 ------------------------------------------------------------------------------
 -- Ex 6: Given a Handle and a list of line indexes, produce the lines
@@ -123,7 +193,17 @@ hFetchLines = todo
 -- handle.
 
 hSelectLines :: Handle -> [Int] -> IO [String]
-hSelectLines h nums = todo
+hSelectLines h nums = do
+  lines <- hFetchLines h
+  let lineAndIndx = zip lines [1 ..]
+  return $ getLineFromIndex lineAndIndx nums
+
+getLineFromIndex :: [(String, Int)] -> [Int] -> [String]
+getLineFromIndex _ [] = []
+getLineFromIndex [] _ = []
+getLineFromIndex ((a, b) : xs) (y : ys)
+  | b == y = a : getLineFromIndex xs ys
+  | otherwise = getLineFromIndex xs (y : ys)
 
 ------------------------------------------------------------------------------
 -- Ex 7: In this exercise we see how a program can be split into a
@@ -158,10 +238,17 @@ hSelectLines h nums = todo
 --   *Set11b>
 
 -- This is used in the example above. Don't change it!
-counter :: (String,Integer) -> (Bool,String,Integer)
-counter ("inc",n)   = (True,"done",n+1)
-counter ("print",n) = (True,show n,n)
-counter ("quit",n)  = (False,"bye bye",n)
+counter :: (String, Integer) -> (Bool, String, Integer)
+counter ("inc", n) = (True, "done", n + 1)
+counter ("print", n) = (True, show n, n)
+counter ("quit", n) = (False, "bye bye", n)
 
-interact' :: ((String,st) -> (Bool,String,st)) -> st -> IO st
-interact' f state = todo
+interact' :: ((String, st) -> (Bool, String, st)) -> st -> IO st
+interact' f state = do
+  line <- getLine
+  let (continue, str, newState) = f (line, state)
+  putStrLn str
+  if continue
+    then do
+      interact' f newState
+    else return newState
