@@ -305,16 +305,13 @@ parensMatch s = count == 0
 count :: Eq a => a -> State [(a, Int)] ()
 count x = do
   state <- get
-  let amount = findX x state
-  let added = (x, amount) : state
-  let adjusted = map (\(k, v) -> if k == x then (k, amount) else (k, v)) state
-  put $ if amount == 1 then added else adjusted
+  put $ updateCount x state
 
-findX :: Eq a => a -> [(a, Int)] -> Int
-findX x [] = 1
-findX x ((a, n) : as)
-  | x == a = n + 1
-  | otherwise = findX x as
+updateCount :: Eq a => a -> [(a, Int)] -> [(a, Int)]
+updateCount a [] = [(a, 1)]
+updateCount a ((x, n) : xs)
+  | a == x = (a, n + 1) : xs
+  | otherwise = (x, n) : updateCount a xs
 
 ------------------------------------------------------------------------------
 -- Ex 10: Implement the operation occurrences, which
