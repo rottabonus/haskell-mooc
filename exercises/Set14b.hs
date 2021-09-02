@@ -156,13 +156,9 @@ data Command = Deposit T.Text Int | Balance T.Text | Withdraw T.Text Int
 parseInt :: T.Text -> Maybe Int
 parseInt = readMaybe . T.unpack
 
-(?>) :: Maybe a -> (a -> Maybe b) -> Maybe b
-Nothing ?> _ = Nothing -- In case of failure, propagate failure
-Just x ?> f = f x -- In case of sucess, run the next computation
-
 parseCommand :: [T.Text] -> Maybe Command
 parseCommand [] = Nothing
-parseCommand textArr = checkCmd textArr ?> checkLength ?> checkLast ?> buildResult
+parseCommand textArr = checkCmd textArr >>= checkLength >>= checkLast >>= buildResult
 
 checkCmd :: [T.Text] -> Maybe ([T.Text], Int)
 checkCmd textArr
@@ -193,6 +189,8 @@ buildResult text
     cmd = head text
     account = head (tail text)
     Just amount = parseInt $ last text
+
+-- I knew this was not a good solution, but after seeing the model-solution to this problem.. I almost started crying.. =D
 
 ------------------------------------------------------------------------------
 -- Ex 4: Running commands. Implement the IO operation perform that takes a
