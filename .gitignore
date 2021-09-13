@@ -1,5 +1,5 @@
 *~
 *.lock
-.stack-work
+excercises/.stack-work/*
 score.json
 example*

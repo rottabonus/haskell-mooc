@@ -1,10 +1,9 @@
 module Set15 where
 
-import Mooc.Todo
-import Examples.Validation
-
 import Control.Applicative
 import Data.Char
+import Examples.Validation
+import Mooc.Todo
 import Text.Read (readMaybe)
 
 ------------------------------------------------------------------------------
@@ -17,7 +16,7 @@ import Text.Read (readMaybe)
 --  sumTwoMaybes Nothing Nothing    ==> Nothing
 
 sumTwoMaybes :: Maybe Int -> Maybe Int -> Maybe Int
-sumTwoMaybes = todo
+sumTwoMaybes = liftA2 (+)
 
 ------------------------------------------------------------------------------
 -- Ex 2: Given two lists of words, xs and ys, generate all statements
@@ -36,7 +35,11 @@ sumTwoMaybes = todo
 --         "code is not suffering","code is not life"]
 
 statements :: [String] -> [String] -> [String]
-statements = todo
+statements xs ys = statement <$> [True, False] <*> xs <*> ys
+
+statement :: Bool -> String -> String -> String
+statement True x y = x ++ " is " ++ y
+statement False x y = x ++ " is not " ++ y
 
 ------------------------------------------------------------------------------
 -- Ex 3: A simple calculator with error handling. Given an operation
@@ -54,7 +57,12 @@ statements = todo
 --  calculator "double" "7x"  ==> Nothing
 
 calculator :: String -> String -> Maybe Int
-calculator = todo
+calculator x y = parseOperation x <*> readMaybe y
+
+parseOperation :: Num a => String -> Maybe (a -> a)
+parseOperation "negate" = Just (* (-1))
+parseOperation "double" = Just (* 2)
+parseOperation _ = Nothing
 
 ------------------------------------------------------------------------------
 -- Ex 4: Safe division. Implement the function validateDiv that
@@ -71,7 +79,11 @@ calculator = todo
 --  validateDiv 0 3 ==> Ok 0
 
 validateDiv :: Int -> Int -> Validation Int
-validateDiv = todo
+validateDiv x y = liftA2 div (checkZero x) (checkZero y)
+
+checkZero :: Int -> Validation Int
+checkZero 0 = invalid "Division by zero!"
+checkZero x = pure x
 
 ------------------------------------------------------------------------------
 -- Ex 5: Validating street addresses. A street address consists of a
@@ -80,11 +92,17 @@ validateDiv = todo
 -- Implement the function validateAddress which constructs an Address
 -- value if the input is valid:
 --
+
 -- * Street length should be at most 20 characters
+
 --   (if not, error "Invalid street name")
+
 -- * Street number should only contain digits
+
 --   (if not, error "Invalid street number")
+
 -- * Postcode should be exactly five digits long
+
 --   (if not, error "Invalid postcode")
 --
 -- Examples:
@@ -98,10 +116,23 @@ validateDiv = todo
 --    ==> Errors ["Invalid street name","Invalid street number","Invalid postcode"]
 
 data Address = Address String String String
-  deriving (Show,Eq)
+  deriving (Show, Eq)
 
 validateAddress :: String -> String -> String -> Validation Address
-validateAddress streetName streetNumber postCode = todo
+validateAddress streetName streetNumber postCode =
+  checkLength streetName "Invalid street name" 20 (>)
+    *> checkNumbers streetNumber "Invalid street number"
+    *> checkPostCode postCode "Invalid postcode"
+    *> pure (Address streetName streetNumber postCode)
+
+checkLength :: String -> String -> Int -> (Int -> Int -> Bool) -> Validation String
+checkLength s e n op = if length s `op` n then invalid e else pure s
+
+checkNumbers :: String -> String -> Validation String
+checkNumbers s e = if all isDigit s then pure s else invalid e
+
+checkPostCode :: String -> String -> Validation String
+checkPostCode s e = checkLength s e 5 (/=) *> checkNumbers s e
 
 ------------------------------------------------------------------------------
 -- Ex 6: Given the names, ages and employment statuses of two
@@ -120,9 +151,15 @@ validateAddress streetName streetNumber postCode = todo
 data Person = Person String Int Bool
   deriving (Show, Eq)
 
-twoPersons :: Applicative f =>
-  f String -> f Int -> f Bool -> f String -> f Int -> f Bool
-  -> f [Person]
+twoPersons ::
+  Applicative f =>
+  f String ->
+  f Int ->
+  f Bool ->
+  f String ->
+  f Int ->
+  f Bool ->
+  f [Person]
 twoPersons name1 age1 employed1 name2 age2 employed2 = todo
 
 ------------------------------------------------------------------------------
@@ -149,11 +186,17 @@ boolOrInt = todo
 -- Ex 8: Improved phone number validation. Implement the function
 -- normalizePhone that, given a String:
 --
+
 -- * removes all spaces from the string
+
 -- * checks that there are at most 10 remaining characters
+
 -- * checks that all remaining characters are digits, and logs an
+
 --   error for every nonvalid character
+
 -- * returns the string, stripped of whitespace, if no errors
+
 --
 -- Examples:
 --  normalizePhone "123 456 78" ==> Ok "12345678"
@@ -218,9 +261,13 @@ parseExpression = todo
 -- (represented by an Int). Implement the Functor and Applicative
 -- instances for Priced. They should work like this:
 --
+
 -- * Transforming a Priced value with fmap keeps the price the same
+
 -- * pure should create a value with price 0
+
 -- * liftA2 should sum the prices of the things to be combined
+
 --
 -- Examples:
 --  fmap reverse (Priced 3 "abc")
@@ -268,6 +315,7 @@ class MyApplicative f where
 instance MyApplicative Maybe where
   myPure = pure
   myLiftA2 = liftA2
+
 instance MyApplicative [] where
   myPure = pure
   myLiftA2 = liftA2
@@ -339,7 +387,7 @@ tryAll = todo
 --  fmap (+1) (Both [[1,2,3],[4,5]])  ==> Both [[2,3,4],[5,6]]
 
 newtype Both f g a = Both (f (g a))
-  deriving Show
+  deriving (Show)
 
 instance (Functor f, Functor g) => Functor (Both f g) where
   fmap = todo
