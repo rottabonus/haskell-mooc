@@ -160,7 +160,10 @@ twoPersons ::
   f Int ->
   f Bool ->
   f [Person]
-twoPersons name1 age1 employed1 name2 age2 employed2 = todo
+twoPersons name1 age1 employed1 name2 age2 employed2 = traverse createPerson [(name1, age1, employed1), (name2, age2, employed2)]
+
+createPerson :: Applicative f => (f String, f Int, f Bool) -> f Person
+createPerson (name, age, employed) = Person <$> name <*> age <*> employed
 
 ------------------------------------------------------------------------------
 -- Ex 7: Validate a String that's either a Bool or an Int. The return
@@ -180,7 +183,17 @@ twoPersons name1 age1 employed1 name2 age2 employed2 = todo
 --  boolOrInt "Falseb"  ==> Errors ["Not a Bool","Not an Int"]
 
 boolOrInt :: String -> Validation (Either Bool Int)
-boolOrInt = todo
+boolOrInt s = parseBool s <|> parseInt s
+
+parseBool :: String -> Validation (Either Bool Int)
+parseBool s = case readMaybe s :: Maybe Bool of
+  Just res -> pure (Left res)
+  Nothing -> invalid "Not a Bool"
+
+parseInt :: String -> Validation (Either Bool Int)
+parseInt s = case readMaybe s :: Maybe Int of
+  Just res -> pure (Right res)
+  Nothing -> invalid "Not an Int"
 
 ------------------------------------------------------------------------------
 -- Ex 8: Improved phone number validation. Implement the function
@@ -210,7 +223,18 @@ boolOrInt = todo
 --    ==> Errors ["Too long"]
 
 normalizePhone :: String -> Validation String
-normalizePhone = todo
+normalizePhone numberStr = checkLength normalized "Too Long" 10 (/=) *> checkDigits normalized *> pure normalized
+  where
+    normalized = removeSpaces numberStr
+
+removeSpaces :: String -> String
+removeSpaces = filter (\x -> (x /= ' '))
+
+checkDigit :: Char -> Validation Char
+checkDigit c = if isDigit c then pure c else invalid ("Invalid character: " ++ [c])
+
+checkDigits :: String -> Validation String
+checkDigits = traverse checkDigit
 
 ------------------------------------------------------------------------------
 -- Ex 9: Parsing expressions. The Expression type describes an
@@ -254,7 +278,37 @@ data Expression = Plus Arg Arg | Minus Arg Arg
   deriving (Show, Eq)
 
 parseExpression :: String -> Validation Expression
-parseExpression = todo
+parseExpression s
+  | checkExpressionLength s = buildExpression <$> getOperation operation <*> getArg x1 <*> getArg x2
+  | otherwise = invalid ("Invalid expression: " ++ s)
+  where
+    [x1, operation, x2] = words s
+
+buildExpression :: String -> Arg -> Arg -> Expression
+buildExpression operation x1 x2 = if operation == "+" then Plus x1 x2 else Minus x1 x2
+
+getArg :: String -> Validation Arg
+getArg s
+  | isVar s = pure $ Variable (head s)
+  | isNum s = pure $ Number (read s :: Int)
+  | otherwise = invalid ("Invalid variable: " ++ s)
+
+getOperation :: String -> Validation String
+getOperation s
+  | isOperation s = pure s
+  | otherwise = invalid ("Invalid operation: " ++ s)
+
+isNum :: String -> Bool
+isNum = all isDigit
+
+isVar :: String -> Bool
+isVar s = (length s == 1) && isAlpha (head s)
+
+isOperation :: String -> Bool
+isOperation s = s == "+" || s == "-"
+
+checkExpressionLength :: String -> Bool
+checkExpressionLength s = length (words s) == 3
 
 ------------------------------------------------------------------------------
 -- Ex 10: The Priced T type tracks a value of type T, and a price
